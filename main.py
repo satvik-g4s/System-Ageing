@@ -30,7 +30,8 @@ with col3:
         type=["xlsx"],
         key="reversal_system"
     )
-
+curr_date = st.date_input("📅 Select Ageing Date",value=pd.Timestamp.today().date())
+curr_date = pd.to_datetime(curr_date)
 if st.button("Run"):
     if uploaded_file1 is None or uploaded_file2 is None or uploaded_file3 is None:
         st.stop()
@@ -84,8 +85,7 @@ if st.button("Run"):
     df4.columns = df3.columns
     df3 = pd.concat([df3, df4], ignore_index=True)
 
-    curr_date = st.date_input("📅 Select Ageing Date",value=pd.Timestamp.today().date())
-    curr_date = pd.to_datetime(curr_date)
+    
     
     df3['OLD Invoice Date'] = pd.to_datetime(df3['OLD Invoice Date'], errors="coerce")
 
