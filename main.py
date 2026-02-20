@@ -4,7 +4,7 @@ import numpy as np
 import networkx as nx
 from io import BytesIO
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="System Ageing")
 
 st.title("System Ageing")
 
