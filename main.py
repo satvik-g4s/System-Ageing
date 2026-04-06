@@ -152,7 +152,7 @@ if st.button("Run"):
         if b == "more than 365 days": return 100
         return 0
 
-    df1["Provision"] = (df1["Bucket"].apply(provcheck) / 100) * df1["Net Outstanding"]
+    df1["Provision"] = (df1["Adjusted Bucket"].apply(provcheck) / 100) * df1["Net Outstanding"]
 
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
