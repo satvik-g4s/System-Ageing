@@ -153,7 +153,6 @@ if st.button("Run"):
         return 0
 
     df1["Provision"] = (df1["Bucket"].apply(provcheck) / 100) * df1["Net Outstanding"]
-    df1["Net Outstanding"] = np.where(df1["Net Outstanding"] < 0, "Not due", df1["Net Outstanding"])
 
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
