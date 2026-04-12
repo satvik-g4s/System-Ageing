@@ -6,34 +6,198 @@ from io import BytesIO
 
 st.set_page_config(layout="wide")
 
-st.title("System Ageing")
+st.title("📊 System Ageing & Sales Reversal Processor")
+
+# =========================
+# 📂 UPLOAD SECTION
+# =========================
+
+st.subheader("📂 Upload Required Files")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    uploaded_file1 = st.file_uploader(
-        "Final Billage Systems – Current Month (CSV)",
-        type=["csv"],
-        key="final_billage"
-    )
+    st.markdown("### Final Billage Systems – Current Month (CSV)")
+    uploaded_file1 = st.file_uploader("", type=["csv"], key="f1")
+
+    st.caption("""
+Required Columns:
+Invoice No, Invoice Date, Payment Terms, Net Outstanding,
+Cust Code, Customer Name, Order Location,
+Doc Amount, Total Dr Bal, Total Cr Bal
+
+Note:
+- Header starts from row 3
+- Payment Terms format: 30D / 45D
+""")
 
 with col2:
-    uploaded_file2 = st.file_uploader(
-        "Systems Ageing – Last Month (Excel)",
-        type=["xlsx"],
-        key="system_ageing"
-    )
+    st.markdown("### Systems Ageing – Last Month (Excel)")
+    uploaded_file2 = st.file_uploader("", type=["xlsx"], key="f2")
+
+    st.caption("""
+Sheet: Ageing  
+Columns:
+Invoice No, Customer Code, Order Location,
+Recoverable/Not Recoverable
+
+Sheet: Sales Reversal  
+Columns:
+OLDInvoice, NEWInvoice, OLD Invoice Date
+
+Note:
+- Sheet names must match exactly
+""")
 
 with col3:
-    uploaded_file3 = st.file_uploader(
-        "Reversal – System (Excel)",
-        type=["xlsx"],
-        key="reversal_system"
-    )
-curr_date = st.date_input("📅 Select Ageing Date",value=pd.Timestamp.today().date())
+    st.markdown("### Reversal – System (Excel)")
+    uploaded_file3 = st.file_uploader("", type=["xlsx"], key="f3")
+
+    st.caption("""
+Required Columns:
+Or inv No, New Inv No,
+Or inv Dt, New Dt,
+Inv Amt, New amt
+
+Note:
+- Column names must match system format
+""")
+
+curr_date = st.date_input("📅 Select Ageing Date", value=pd.Timestamp.today().date())
 curr_date = pd.to_datetime(curr_date)
-if st.button("Run"):
+
+# RUN BUTTON BELOW UPLOADS
+run_clicked = st.button("🚀 Run Processing")
+
+# =========================
+# 📘 SEPARATE GUIDE BOXES
+# =========================
+
+with st.expander("🔹 What This Tool Does"):
+    st.markdown("""
+This tool calculates the **true ageing of receivables** by ensuring that invoice ageing is always tracked from the **original invoice date**, even when invoices are reversed and reissued.
+
+It helps in:
+- Accurate ageing reporting  
+- Financial risk identification  
+- Provision calculation  
+""")
+
+with st.expander("🔹 How to Use"):
+    st.markdown("""
+1. Upload all three required files  
+2. Ensure column names match the required format  
+3. Select the ageing date  
+4. Click **Run Processing**  
+5. Download the output file  
+""")
+
+with st.expander("🔹 Output Details"):
+    st.markdown("""
+The tool generates an Excel file with:
+
+**1. Ageing Sheet**
+- Final ageing bucket  
+- Adjusted bucket  
+- Provision amount  
+
+**2. Sales Reversal Sheet**
+- Invoice mapping history  
+- Used for audit and validation  
+""")
+
+with st.expander("🔹 Financial Logic"):
+
+    st.markdown("### 1. Impacted Overdue Days")
+    st.latex(r"\text{Impacted Overdue Days} = (\text{Selected Date} - \text{Original Invoice Date}) - \text{Payment Terms}")
+
+    st.markdown("""
+- Ageing is calculated from the **original invoice date**, not the latest invoice number  
+- Payment terms are deducted to capture only the **overdue period**  
+- This ensures that delays are measured correctly irrespective of invoice replacements  
+""")
+
+    st.markdown("---")
+
+    st.markdown("### 2. Invoice Continuity (Reversals Handling)")
+    st.markdown("""
+- When an invoice is replaced by another (due to reversal or rebooking), the system continues ageing from the **first issued invoice**  
+- The ageing does **not reset** when a new invoice is created  
+- This prevents artificial reduction of ageing due to operational adjustments  
+""")
+
+    st.markdown("---")
+
+    st.markdown("### 3. Ageing Bucket Classification")
+    st.markdown("""
+Invoices are classified based on **Impacted Overdue Days**:
+
+- Not due → ≤ 7 days  
+- 8 to 30 days  
+- 31 to 60 days  
+- 61 to 90 days  
+- 91 to 180 days  
+- 181 to 365 days  
+- More than 365 days  
+
+This classification helps in assessing **delay severity and risk level**
+""")
+
+    st.markdown("---")
+
+    st.markdown("### 4. Adjusted Ageing (Post Reversal Impact)")
+    st.markdown("""
+- If an invoice has a linked history (through reversals), its bucket is adjusted based on the **original ageing chain**  
+- If no linkage exists, standard ageing is used  
+- Final bucket reflects the **true ageing position**
+""")
+
+    st.markdown("---")
+
+    st.markdown("### 5. Credit Balance Treatment")
+    st.markdown("""
+- If **Net Outstanding < 0**:
+  → Automatically classified as **"Not due"**  
+
+- This ensures credit balances are not treated as overdue risk  
+""")
+
+    st.markdown("---")
+
+    st.markdown("### 6. Provision Calculation")
+    st.markdown("""
+Provision is calculated based on **Adjusted Ageing Bucket**:
+
+- 61–90 days → 5%  
+- 91–180 days → 30%  
+- 181–365 days → 60%  
+- More than 365 days → 100%  
+- Others → 0%  
+
+Provision is applied on **Net Outstanding Amount**
+""")
+
+    st.markdown("---")
+
+    st.markdown("### 7. Recoverability Status")
+    st.markdown("""
+- If an invoice exists in previous ageing:
+  → Previous **Recoverable / Not Recoverable** status is retained  
+
+- If not found:
+  → Default status = **Recoverable**  
+
+This ensures continuity in financial classification across periods  
+""")
+
+# =========================
+# 🚀 PROCESSING
+# =========================
+
+if run_clicked:
+
     if uploaded_file1 is None or uploaded_file2 is None or uploaded_file3 is None:
+        st.warning("Please upload all required files.")
         st.stop()
 
     df1 = pd.read_csv(uploaded_file1, header=2, index_col=False)
@@ -85,8 +249,6 @@ if st.button("Run"):
     df4.columns = df3.columns
     df3 = pd.concat([df3, df4], ignore_index=True)
 
-    
-    
     df3['OLD Invoice Date'] = pd.to_datetime(df3['OLD Invoice Date'], errors="coerce")
 
     G = nx.DiGraph()
@@ -159,8 +321,10 @@ if st.button("Run"):
         df1.to_excel(writer, sheet_name="Ageing", index=False)
         sales_reversal.to_excel(writer, sheet_name="Sales Reversal", index=False)
 
+    st.success("Processing Completed!")
+
     st.download_button(
-        "Download Output",
+        "📥 Download Output",
         data=output.getvalue(),
         file_name="System_Ageing_Output.xlsx"
     )
